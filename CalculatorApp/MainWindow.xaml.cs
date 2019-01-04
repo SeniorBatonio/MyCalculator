@@ -37,18 +37,17 @@ namespace CalculatorApp
         public MainWindow()
         {
             InitializeComponent();
- 
-            this.MainField.TextChanged += (object sender, TextChangedEventArgs e) => MainField.Text = MainField.Text.TrimStart('0', ' ', '+');
+
+            this.MainField.TextChanged += MainField_TextChanged;
 
             AddNumbersHendlers((object sender, RoutedEventArgs e) =>
             {
                 var button = (Button)sender;
                 this.MainField.Text += button.Content.ToString();
             });
-
+            this.MainField.KeyDown += MainField_KeyDown;
             this.AddButton.Click += (object sender, RoutedEventArgs e) => this.MainField.Text += AddButton.Content.ToString();
             this.SubtractButton.Click += (object sender, RoutedEventArgs e) => this.MainField.Text += SubtractButton.Content.ToString();
-            this.DotButton.Click += (object sender, RoutedEventArgs e) => this.MainField.Text += DotButton.Content.ToString();
             this.MultiplyButton.Click += (object sender, RoutedEventArgs e) => this.MainField.Text += MultiplyButton.Content.ToString();
             this.DivideButton.Click += (object sender, RoutedEventArgs e) => this.MainField.Text += DivideButton.Content.ToString();
             this.AddButton.Click += AddButton_Click;
@@ -60,36 +59,91 @@ namespace CalculatorApp
             {
                 MainField.Clear();
                 RemoveNumbersHendlers(ReadContent);
+                RemoveNumbersHendlers(NewCalculation);
+                this.MainField.KeyDown -= NewCalculation;
             };
             this.DeleteButton.Click += (object sender, RoutedEventArgs e) =>
             {
                 MainField.Text = MainField.Text.Remove(MainField.Text.Length - 1);
                 RemoveNumbersHendlers(ReadContent);
+                this.MainField.KeyDown -= NewCalculation;
             };
+        }
+
+        private void MainField_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (MainField.Text != "0")
+            {
+                MainField.Text = MainField.Text.TrimStart('0', ' ', '+');
+            }
+            Func<char, bool> func = (c) =>
+             {
+                 return Char.IsDigit(c) || "×+-*/.,".Contains(c);
+             };
+            this.MainField.Text = new String(MainField.Text.Where(func).ToArray());
+            
+        }
+
+        private void MainField_KeyDown(object sender, KeyEventArgs e)
+        {
+            var key = e.Key;
+            switch(key)
+            {
+                case Key.Add:
+                    AddButton_Click(sender, new RoutedEventArgs());
+                    break;
+                case Key.Subtract:
+                    SubtractButton_Click(sender, new RoutedEventArgs());
+                    break;
+                case Key.Multiply:
+                    MultiplyButton_Click(sender, new RoutedEventArgs());
+                    break;
+                case Key.Divide:
+                    DivideButton_Click(sender, new RoutedEventArgs());
+                    break;
+                case Key.Enter:
+                    EqualsButton_Click(sender, new RoutedEventArgs());
+                    break;
+            }
         }
 
         private void DivideButton_Click(object sender, RoutedEventArgs e)
         {
-            RemoveNumbersHendlers(NewCalculation);
-            this.calculating = Calculation.Divide;
-            this.a = MainField.Text.Remove(MainField.Text.Length - 1);
-            AddNumbersHendlers(ReadContent);
+            if (MainField.Text != "*")
+            {
+                RemoveNumbersHendlers(NewCalculation);
+                this.calculating = Calculation.Divide;
+                this.a = MainField.Text.TrimEnd('+', '-', '*', '/', ' ', '×');
+                this.a = this.a.Replace('.', ',');
+                AddNumbersHendlers(ReadContent);
+                this.MainField.KeyDown += ReadKeys;
+            }
         }
 
         private void MultiplyButton_Click(object sender, RoutedEventArgs e)
         {
-            RemoveNumbersHendlers(NewCalculation);
-            this.calculating = Calculation.Multiply;
-            this.a = MainField.Text.Remove(MainField.Text.Length - 1);
-            AddNumbersHendlers(ReadContent);
+            if (MainField.Text != "*")
+            {
+                RemoveNumbersHendlers(NewCalculation);
+                this.calculating = Calculation.Multiply;
+                this.a = MainField.Text.TrimEnd('+', '-', '*', '/', ' ', '×');
+                this.a = this.a.Replace('.', ',');
+                AddNumbersHendlers(ReadContent);
+                this.MainField.KeyDown += ReadKeys;
+            }
         }
 
         private void SubtractButton_Click(object sender, RoutedEventArgs e)
         {
-            RemoveNumbersHendlers(NewCalculation);
-            this.calculating = Calculation.Subtract;
-            this.a = MainField.Text.Remove(MainField.Text.Length - 1);
-            AddNumbersHendlers(ReadContent);
+            if (MainField.Text != "-")
+            {
+                RemoveNumbersHendlers(NewCalculation);
+                this.calculating = Calculation.Subtract;
+                this.a = MainField.Text.TrimEnd('+', '-', '*', '/', ' ', '×');
+                this.a = this.a.Replace('.', ',');
+                AddNumbersHendlers(ReadContent);
+                this.MainField.KeyDown += ReadKeys;
+            }
         }
 
         private void AddNumbersHendlers(RoutedEventHandler eventHandler)
@@ -104,6 +158,7 @@ namespace CalculatorApp
             this.SevenButton.Click += eventHandler;
             this.EightButton.Click += eventHandler;
             this.NineButton.Click += eventHandler;
+            this.DotButton.Click += eventHandler;
         }
 
         private void RemoveNumbersHendlers(RoutedEventHandler eventHandler)
@@ -118,6 +173,7 @@ namespace CalculatorApp
             this.SevenButton.Click -= eventHandler;
             this.EightButton.Click -= eventHandler;
             this.NineButton.Click -= eventHandler;
+            this.DotButton.Click -= eventHandler;
         }
 
         private void ReadContent(object sender, RoutedEventArgs e)
@@ -128,14 +184,26 @@ namespace CalculatorApp
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
-            RemoveNumbersHendlers(NewCalculation);
-            this.calculating = Calculation.Add;
-            this.a = MainField.Text.Remove(MainField.Text.Length - 1);
-            AddNumbersHendlers(ReadContent);
+            if (MainField.Text != "+")
+            {
+                RemoveNumbersHendlers(NewCalculation);
+                this.calculating = Calculation.Add;
+                this.a = MainField.Text.TrimEnd('+', '-', '*', '/', ' ', '×');
+                this.a = this.a.Replace('.', ',');
+                AddNumbersHendlers(ReadContent);
+                this.MainField.KeyDown += ReadKeys;
+            }
+        }
+
+        private void ReadKeys(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Decimal){ b += ','; }
+            this.b += new String(e.Key.ToString().Where(Char.IsDigit).ToArray());
         }
 
         private void EqualsButton_Click(object sender, RoutedEventArgs e)
         {
+            this.MainField.KeyDown -= ReadKeys;
             RemoveNumbersHendlers(ReadContent);
             var a = Convert.ToDouble(this.a);
             var b = Convert.ToDouble(this.b);
@@ -161,12 +229,16 @@ namespace CalculatorApp
                 result = null;
             }
             AddNumbersHendlers(NewCalculation);
+            this.MainField.KeyDown -= MainField_KeyDown;
+            this.MainField.KeyDown += NewCalculation;
         }
 
         private void NewCalculation(object sender, RoutedEventArgs e)
         {
             MainField.Clear();
             RemoveNumbersHendlers(NewCalculation);
+            this.MainField.KeyDown -= NewCalculation;
+            this.MainField.KeyDown += MainField_KeyDown;
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
